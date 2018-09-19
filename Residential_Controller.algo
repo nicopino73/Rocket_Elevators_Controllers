@@ -1,0 +1,68 @@
+SEQUENCE CallElevator (Direction, Floor)
+    CALL ActivateButton (Direction, Floor)
+    CALL FindElevator (Direction, Floor) RETURNING ElevatorNumber
+    CALL RequestElevator (ElevatorNumber, Floor)
+END SEQUENCE
+
+
+SEQUENCE ActivateButton (Direction, Floor)
+    CALL FindButton (Direction, Floor) RETURNING Button
+    SET Button Active
+END SEQUENCE
+
+
+SEQUENCE FindButton (Direction, Floor)
+    FOR EACH Button IN Buttons
+        IF Floor = ButtonFloor AND Direction = ButtonDirection
+        THEN RETURN Button
+    END FOR
+END SEQUENCE
+
+
+SEQUENCE FindElevator (Direction, Floor)
+    WHILE NoElevatorFound
+        FOR EACH Elevator IN Elevators
+            IF Status IS Idle
+                THEN RETURN Elevator
+        
+            IF Floor = CurrentFloor THEN
+                IF Status IS Stopped AND Direction = ButtonDirection
+                    THEN RETURN Elevator      
+                    
+            IF Floor > CurrentFloor THEN
+                IF Status IS Move THEN
+                  IF Direction IS GoingUp AND ButtonDirection IS Up
+                    THEN RETURN Elevator       
+             
+            IF Floor < CurrentFloor
+              IF Status IS Move
+                  IF Direction IS GoingDown AND ButtonDirection IS Down
+                        THEN RETURN Elevator
+            END IF            
+        END FOR
+    END WHILE
+END SEQUENCE
+
+SEQUENCE RequestElevator (Elevator, Floor)
+    
+    IF CurrentFloor = Floor
+        THEN Call OpenDoor
+     
+    IF CurrentFloor > Floor
+        THEN Call LevelDown
+        
+    IF CurrentFloor < Floor
+        THEN Call LevelUP
+    END IF
+END SEQUENCE
+
+SEQUENCE OpenDoor
+    OpenDoor 
+    wait 5 seconds
+    WHILE DoorPath IS Blocked
+        THEN wait 3 Seconds
+    END WHILE
+    IF DoorPath Is NotBlocked
+        Then CloseDoor
+END SEQUENCE
+
