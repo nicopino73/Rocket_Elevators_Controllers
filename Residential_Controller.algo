@@ -46,6 +46,11 @@ SEQUENCE DeactiveActivateButton (Direction, Floor)
     SET Button Deactive
 END SEQUENCE
 
+SEQUENCE DeactivateInsideButton (Elevator, Floor)
+    CALL FindActiveInsideButton (Elevator, Floor) RETURNING Button
+    SET Button Inactive
+END SEQUENCE
+
 SEQUENCE FindButton (Direction, Floor)
     FOR EACH Button IN Buttons
         IF Floor = ButtonFloor AND Direction = ButtonDirection
@@ -60,6 +65,13 @@ SEQUENCE FindActiveButton (Direction, Floor)
     END FOR
 END SEQUENCE
 
+SEQUENCE FindActiveInsideButton (Elevator, Floor)
+    FOR EACH ActiveInsideButton IN ActiveInsideButtons
+        IF ElevatorFloor = ActiveInsideButtonFloor
+        THEN RETURN ActiveInsideButton
+    END FOR
+END SEQUENCE
+
 SEQUENCE ActivateInsideButton (Floor)  (À retiré si pas utilisé)
     SET Button Active
     READ ActivateInsideButton 
@@ -69,42 +81,25 @@ END SEQUENCE
 
 
 SEQUENCE FindElevator (Direction, Floor)
-    WHILE NoElevatorFound
-        FOR EACH Elevator IN Elevators
-            
-        
-            IF Floor = CurrentFloor THEN
-                IF Status IS Stopped AND ElevatorDirection IS Direction THEN 
-                    RETURN Elevator
-                Else IF Status IS Idle THEN 
-                    RETURN Elevator
-                    
-            ELSE IF Floor > CurrentFloor
-                IF Status IS Moving AND ElevatorDirection IS GoingUp AND ElevatorDirection IS Direction THEN 
-                    RETURN Elevator
-                ELSE IF Status IS Idle THEN
-                    RETURN Elevator
-                ELSE IF Status IS Stopped AND ElevatorDirection IS GoingUp AND ElevatorDirection IS Direction THEN 
-                    RETURN Elevator
-                ELSE IF CALL IsShortestFloorList RETURNING TRUE AND CALL IsNearestElevator RETURNING TRUE THEN
-                    RETURN Elevator
-                Else IF CALL IsShortestFloorList RETURNING TRUE THEN
-                    RETURN Elevator
-             
-            ELSE IF Floor < CurrentFloor
-              IF Status IS Moving AND ElevatorDirection IS GoingDown AND ElevatorDirection IS Direction THEN 
-                    RETURN Elevator
-                ELSE IF Status IS Idle THEN
-                    RETURN Elevator
-                ELSE IF Status IS Stopped AND ElevatorDirection IS GoingDown AND ElevatorDirection IS Direction THEN 
-                    RETURN Elevator
-                ELSE IF CALL IsShortestFloorList RETURNING TRUE AND CALL IsNearestElevator RETURNING TRUE THEN
-                    RETURN Elevator
-                Else IF CALL IsShortestFloorList RETURNING TRUE THEN
-                    RETURN Elevator
-            END IF            
-        END FOR
-    END WHILE
+       WHILE Elevator NOT Found
+           FOR EACH Elevator IN Elevators
+               IF Floor = CurrentFloor  AND Status Is Stopped AND ElevatorDirection IS Direction THEN
+                   RETURN Elevator
+                   ELSE IF Status IS Idle AND Floor = CurrentFloor THEN
+                   RETURN Elevator
+               ELSE IF Floor > CurrentFloor AND ElevatorDirection IS GoingUp AND ElevatorDirection IS Direction THEN
+                   RETURN Elevator
+               ELSE IF ElevatorDirection IS GoingUp AND ElevatorDirection IS Direction AND Floor > CurrentFloor THEN
+                   RETURN Elevator
+               ELSE IF ElevatorDirection IS GoingDown AND ElevatorDirection IS Direction AND Floor < CurrentFloor THEN
+                   RETURN Elevator
+               END IF
+           END FOR
+
+           READ Elevator WITH Shortest FloorList FROM Elevators
+                   RETURN Elevator
+
+       END WHILE
 END SEQUENCE
 
 
@@ -150,6 +145,7 @@ END SEQUENCE
 
 SEQUENCE OpenDoor (Elevator, Floor)
     CALL FindActiveButton (Direction, Floor)
+    CALL FindActiveInsideButton (Elevator, Floor)
     REPEAT
         OpenDoor 
         INIT Timer TO 5 seconds
@@ -187,12 +183,10 @@ END SEQUENCE
 
 
 SEQUENCE VerifyWeight
-    GET CurrentWeight
-        IF CurrentWeight > MaxWeight THEN
-            CALL WeightAlert
-        ELSE IF CurrentWeight < MaxWeight THEN
-            SET Status TO MaxWeight || don't take new request
-            ...
+   CASE ..... OF
+       CurrentWeight > MaxWeight : SET Status TO Maintenance
+       CurrentWeight = MaxWeight : SET status TO MaxWeight || don't take other stops
+       OTHERS : CALL RequestFloor
 END SEQUENCE
 
 SEQUENCE WeightAlert
