@@ -32,12 +32,13 @@ END SEQUENCE
     
     
 SEQUENCE ButtonPressed (Button)
-    CALL ActivateRequestElevButton (Direction, RequestedFloor)
     IF Button Action IS CallElevator THEN
-        CALL CallElevator (Button Direction, Button Floor, GoingIn)
+        CALL CallElevator (ButtonDirection, ButtonFloor, GoingIn)
+		SET Button Active
     ELSE IF Button Action IS SendRequestToElev THEN
-        IF CALL CheckDestExist (Button Floor) RETURNING FALSE THEN 
-            CALL SendRequestToElev (Button Floor, GoingOut)
+        IF CALL CheckDestExist (ButtonFloor, ButtonElevator) RETURNING FALSE THEN 
+            CALL SendRequestToElev (ButtonFloor, GoingOut)
+			SET Button Active
     ELSE IF Action IS OpenDoor THEN
         CALL OpenDoor(Elevator, Floor)
     ELSE IF Action IS CloseDoor THEN
@@ -48,26 +49,12 @@ END SEQUENCE
 SEQUENCE CallElevator (Direction, RequestedFloor, IsGoingInOrOut)
     CALL FindElevator (Direction, Floor) RETURNING Elevator
     IF CALL CheckDestExist (RequestedFloor, Elevator) RETURNING FALSE THEN 
-        CALL SendRequestToElev (Direction, Elevator, RequestedFloor, IsGoingInOrOut)
-END SEQUENCE
-
-
-
-SEQUENCE ActivateRequestElevButton (Direction, RequestedFloor)
-    IF Button Location IS Outside AND Action IS CallElevator THEN
-        CALL FindRequestElevButton (ActualFloor) RETURNING Button
-        SET Button Active
-        RETURN Button
-    ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
-        CALL FindGoToFloorButton (Elevator, Floor) RETURNING Button
-        SET Button Active 
-        Return Button
-    END IF
+        CALL SendRequestToElev (Elevator, RequestedFloor, IsGoingInOrOut)
 END SEQUENCE
 
 SEQUENCE ClearRequestElevButton (Direction, RequestedFloor)
     CALL FindRequestElevButton (ActualFloor) RETURNING Button
-    SET Button Deactive
+    SET Button Inactive
 END SEQUENCE
 
 SEQUENCE ClearGoToFloorButton (Elevator, Floor)
@@ -139,11 +126,11 @@ SEQUENCE FindElevator (Direction, Floor)
 END SEQUENCE
 
 
-SEQUENCE ShortestestFloorList ()
+SEQUENCE ShortestFloorList ()
     SET Lenght TO 999999
     FOR EACH Elevator IN Elevators
-        IF Lenght > COMPUTE Lenght OF DestinationList THEN
-            SET Lenght TO COMPUTE Lenght OF DestinationList
+        IF Lenght > COMPUTE Lenght OF ElevatorDestinationList THEN
+            SET Lenght TO COMPUTE Lenght OF ElevatorDestinationList
             SET ElevWithShortestList TO Elevator
 		END IF
     END FOR
@@ -163,19 +150,19 @@ SEQUENCE NearestElevator(RequestedFloor, RequestedDirection)
     RETURN ElevWithShortestGap
 END SEQUENCE
 
-SEQUENCE VerifyDestinationList
+SEQUENCE VerifyElevatorDestinationList
     FOR EACH Elevator IN Elevator
         IF First Destination IN Destination NOT EMPTY THEN
             IF LoadError <> 2 THEN
                 IF LoadError = 1 THEN
-                    IF DestinationList IsGoingInOrOut IS GoingOut THEN
+                    IF ElevatorDestinationList IsGoingInOrOut IS GoingOut THEN
                         CALL StartMove (Elevator)
                     ELSE
-                        SET DestinationTemp TO First DestinationList FROM DestinationList
-                        SET IsGoingInOrOutTemp TO First IsGoingInOrOut FROM DestinationList
-                        DELETE First Destination FROM DestinationList
-                        DELETE First IsGoingInOrOut FROM DestinationList
-                        CALL FindElevator (Elevator Direction, DestinationTemp) RETURNING NewElevator
+                        SET DestinationTemp TO First FROM ElevatorDestinationList
+                        SET IsGoingInOrOutTemp TO First FROM ElevatorDestinationList
+                        DELETE First Destination FROM ElevatorDestinationList
+                        DELETE First IsGoingInOrOut FROM ElevatorDestinationList
+                        CALL FindElevator (ElevatorDirection, DestinationTemp) RETURNING NewElevator
                         CALL SendRequestToElev (DestinationTemp, NewElevator, IsGoingInOrOutTemp)
                     END IF
 				END IF
@@ -198,9 +185,9 @@ SEQUENCE StartMove (Elevator)
 END SEQUENCE
 
 
-SEQUENCE SendRequestToElev (Direction, Elevator, RequestedFloor, IsGoingInOrOut)
+SEQUENCE SendRequestToElev (Elevator, RequestedFloor, IsGoingInOrOut)
     ADD RequestedFloor TO FloorList
-    ADD IsGoingInOrOut AT Position IN DestinationList
+    ADD IsGoingInOrOut AT Position IN ElevatorDestinationList
     CALL SortFloorList (FloorList) RETURNING SortedFloorList
     SET FloorList TO SortedFloorList
 END SEQUENCE
@@ -250,14 +237,14 @@ SEQUENCE MoveUp (Elevator, RequestedFloor)
     REPEAT
         COMPUTE ActualFloor = RequestedFloor - 1
     UNTIL ActualFloor IS RequestedFloor
-    CALL SendRequestToElev (Direction, Elevator, RequestedFloor)
+    CALL SendRequestToElev (Elevator, RequestedFloor)
 END SEQUENCE
 
 SEQUENCE MoveDown (Elevator, RequestedFloor)
     REPEAT
         COMPUTE ActualFloor = RequestedFloor + 1
     UNTIL ActualFloor IS RequestedFloor
-    CALL SendRequestToElev (Direction, Elevator, RequestedFloor)
+    CALL SendRequestToElev (Elevator, RequestedFloor)
 END SEQUENCE
 
 SEQUENCE StopElevator(Elevator)
