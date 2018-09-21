@@ -96,7 +96,7 @@ END SEQUENCE
 SEQUENCE FindElevator (Direction, Floor)
     FOR EACH Elevator IN Elevators
         COMPUTE ActualGap as ABSOLUTE OF ActualFloor - Floor
-        COMPUTE ListLenght as Lenght OF PositionList
+        COMPUTE ListLength as Length OF PositionList
         
         IF RequestedFloor = ActualFloor THEN
             IF (Status IS Stopped AND Direction = RequestedDirection) OR (Status IS Idle) THEN
