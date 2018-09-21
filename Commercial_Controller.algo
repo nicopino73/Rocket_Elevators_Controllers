@@ -1,10 +1,16 @@
 SET Total floor = 66
 SET Basement floor = 6
 SET Floor = 66
-SET Total shaft = 4
+SET Total column = 4
 SET Total Elevator = 12
 SET MaxWorkLoadLimit = 2500
 SET MaxLoadLimit = 3000
+SET Default Floor RC = 7
+SET Range column 1 = 7 to 1
+Set Range column 2 = 7 to 26
+Set Range column 3 = 7 skip to 26 to 46
+Set Range column 4 = 7 skip to 46 to 66
+ 
 
 
 WHILE Controler IS On
@@ -15,7 +21,6 @@ WHILE Controler IS On
     
     CALL VerifyDestinationList
     CALL CheckMovingElevator
-    
 END WHILE
 
 SEQUENCE VerifyWeight
@@ -29,19 +34,21 @@ SEQUENCE VerifyWeight
                 SET LoadError TO 0
             END IF
 END SEQUENCE
-CheckDestExist (Floor, Elevator)
 
+    
+    
+    
 SEQUENCE ButtonPressed
-    CALL ActivateButton (Direction, RequestedFloor)
-    IF Button Location IS Outside AND Action Is CallElevator THEN
-        CALL CallElevator (Button Direction, Button Floor, GoingIn)
+    CALL ActivateRequestElevButton (Direction, RequestedFloor)
+        IF Button Location IS Outside AND Action IS CallElevator THEN
+            CALL CallElevator (Button Direction, Button Floor, GoingIn)
     ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
-        IF CALL CheckDestExist (Button Floor, Button Parent) RETURNING FALSE THEN 
-            CALL SendRequestToElev (Button Floor, Button Parent, GoingOut)
+        IF CALL CheckDestExist (Button Floor) RETURNING FALSE THEN 
+            CALL SendRequestToElev (Button Floor, GoingOut)
     ELSE IF Action IS OpenDoor THEN
-        CALL OpenDoor(Button Parent)
+        CALL OpenDoor(Elevator, Floor)
     ELSE IF Action IS CloseDoor THEN
-        Call CloseDoor(Button Parent)
+        Call CloseDoor(Elevator, Floor)
     END IF
 END SEQUENCE
 
@@ -52,9 +59,17 @@ SEQUENCE CallElevator (Direction, RequestedFloor, IsGoingInOrOut)
 END SEQUENCE
 
 
+
 SEQUENCE ActivateRequestElevButton (Direction, RequestedFloor)
-    CALL FindRequestElevButton (ActualFloor) RETURNING Button
-    SET Button Active
+    IF Button Location IS Outside AND Action IS CallElevator THEN
+        CALL FindRequestElevButton (ActualFloor) RETURNING Button
+        SET Button Active
+        RETURN Button
+    ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
+        CALL FindGoToFloorButton (Elevator, Floor) RETURNING Button
+        SET Button Active 
+        Return Button
+    END IF
 END SEQUENCE
 
 SEQUENCE ClearRequestElevButton (Direction, RequestedFloor)
@@ -137,6 +152,7 @@ SEQUENCE ShortestestFloorList ()
         IF Lenght > COMPUTE Lenght OF DestinationList THEN
             SET Lenght TO COMPUTE Lenght OF DestinationList
             SET ElevWithShortestList TO Elevator
+		END IF
     END FOR
     RETURN ElevWithShortestList
 END SEQUENCE
@@ -169,6 +185,7 @@ SEQUENCE VerifyDestinationList
                         CALL FindElevator (Elevator Direction, DestinationTemp) RETURNING NewElevator
                         CALL SendRequestToElev (DestinationTemp, NewElevator, IsGoingInOrOutTemp)
                     END IF
+				END IF
                 CALL StartMove (Elevator)
             ELSE
                 CALL OpenDoor (Elevator)
@@ -206,11 +223,11 @@ SEQUENCE OperateElevator (Elevator, RequestedFloor)
         CALL StopElevator (Elevator)
         CALL OpenDoor (Elevator)
         
-    IF ActualFloor > RequestedFloor THEN
+    ELSE IF ActualFloor > RequestedFloor THEN
         CALL StartMove (Elevator)
         CALL MoveDown (Elevator, Floor)
         
-    IF ActualFloor < RequestedFloor THEN
+    ELSE IF ActualFloor < RequestedFloor THEN
         CALL StartMove (Elevator)
         CALL MoveUp (Elevator, Floor)
     END IF
@@ -231,6 +248,7 @@ SEQUENCE CheckMovingElevator
         END IF
         IF Status IS Stopped THEN
             CALL OpenDoor(Elevator)
+		END IF
     END FOR
 END SEQUENCE
 
@@ -265,9 +283,11 @@ END SEQUENCE
 
 
 SEQUENCE CloseDoor (Elevator, Floor)
-    IF Door IS Closing AND NotObstruct
-    THEN CALL OperateElevator (Elevator, Floor)
-    ELSE CALL OpenDoor (Elevator, Floor)
+    IF Door IS Closing AND NotObstruct THEN 
+		CALL OperateElevator (Elevator, Floor)
+    ELSE 
+		CALL OpenDoor (Elevator, Floor)
+	END IF 
 END SEQUENCE
 
 
@@ -285,7 +305,7 @@ SEQUENCE SortFloorList (FloorList, ElevatorDirection)
             END FOR
             ListLength = newListLength
         UNTIL ListLength = 0
-   RETURN SortFloorList
+		RETURN SortFloorList
    
    ELSE IF ElevatorDirection IS GoingDown THEN
       ListLength = length(A)
@@ -299,6 +319,6 @@ SEQUENCE SortFloorList (FloorList, ElevatorDirection)
             END FOR
             ListLength = newListLength
         UNTIL ListLength = 0
-   RETURN SortFloorList
+		RETURN SortFloorList
    END IF
 END SEQUENCE

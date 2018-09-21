@@ -1,0 +1,35 @@
+cas #1client rc call up to go floor 5 (elevator#1 floor 3 idle) (Elevator#2 floor 2 idle)
+cas #2client floor 3 call up to go floor 6 (elevator#1 floor 2 going down) (Elevator#2 floor 6 idle)
+
+Cas#1
+
+SEQUENCE ButtonPressed
+    CALL ActivateRequestElevButton (Direction, RequestedFloor)
+        IF Button Location IS Outside AND Action IS CallElevator THEN
+            CALL CallElevator (Button Direction, Button Floor, GoingIn)
+    ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
+        IF CALL CheckDestExist (Button Floor) RETURNING FALSE THEN 
+            CALL SendRequestToElev (Button Floor, GoingOut)
+    ELSE IF Action IS OpenDoor THEN
+        CALL OpenDoor(Elevator, Floor)
+    ELSE IF Action IS CloseDoor THEN
+        Call CloseDoor(Elevator, Floor)
+    END IF
+END SEQUENCE
+            
+            
+SEQUENCE ActivateRequestElevButton (Direction, RequestedFloor)
+    IF Button Location IS Outside AND Action IS CallElevator THEN
+        CALL FindRequestElevButton (ActualFloor) RETURNING Button
+        SET Button Active
+    ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
+        CALL FindGoToFloorButton (Elevator, Floor)
+        SET Button Active
+    END IF
+END SEQUENCE
+
+SEQUENCE CallElevator (Direction, RequestedFloor, IsGoingInOrOut)
+    CALL FindElevator (Direction, Floor) RETURNING Elevator
+    IF CALL CheckDestExist (RequestedFloor, Elevator) RETURNING FALSE THEN 
+        CALL SendRequestToElev (Direction, Elevator, RequestedFloor, IsGoingInOrOut)
+END SEQUENCE
