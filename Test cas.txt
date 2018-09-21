@@ -3,11 +3,11 @@ cas #2client floor 3 call up to go floor 6 (elevator#1 floor 2 going down) (Elev
 
 Cas#1
 
-SEQUENCE ButtonPressed
-    CALL ActivateRequestElevButton (Direction, RequestedFloor)
-        IF Button Location IS Outside AND Action IS CallElevator THEN
-            CALL CallElevator (Button Direction, Button Floor, GoingIn)
-    ELSE IF Button Location IS Inside AND Action IS SendRequestToElev THEN
+SEQUENCE ButtonPressed 
+    SET Button Active
+    IF Button Action IS CallElevator THEN
+        CALL CallElevator (Button Direction, Button Floor, GoingIn)
+    ELSE IF Button Action IS SendRequestToElev THEN
         IF CALL CheckDestExist (Button Floor) RETURNING FALSE THEN 
             CALL SendRequestToElev (Button Floor, GoingOut)
     ELSE IF Action IS OpenDoor THEN
