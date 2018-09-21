@@ -42,7 +42,7 @@ SEQUENCE ButtonPressed (Button)
 		SET Button Active
     ELSE IF Button Action IS SendRequestToElev THEN
         IF CALL CheckDestExist (ButtonFloor, ButtonElevator) RETURNING FALSE THEN 
-            CALL SendRequestToElev (ButtonFloor, GoingOut)
+            CALL SendRequestToElev (RequestedFloor, Elevator, GoingOut)
 			SET Button Active
     ELSE IF Action IS OpenDoor THEN
         CALL OpenDoor(Elevator, Floor)
